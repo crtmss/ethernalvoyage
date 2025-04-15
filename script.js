@@ -1,37 +1,52 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-let source, gainNode, filterNode, delayNode, distortionNode, tremoloNode, tremoloOsc;
+let source, gainNode, filterNode, delayNode, distortionNode, tremoloNode, tremoloOsc, compressor;
 
 const createEffectChain = () => {
-  // Create nodes
+  // Core FX nodes
   gainNode = audioCtx.createGain();
   filterNode = audioCtx.createBiquadFilter();
   delayNode = audioCtx.createDelay();
   distortionNode = audioCtx.createWaveShaper();
+  compressor = audioCtx.createDynamicsCompressor();
 
-  // Tremolo
+  // Soft post-mastering
+  compressor.threshold.setValueAtTime(-30, audioCtx.currentTime);
+  compressor.knee.setValueAtTime(20, audioCtx.currentTime);
+  compressor.ratio.setValueAtTime(3, audioCtx.currentTime);
+  compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+  compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
+
+  // Tremolo setup
   tremoloNode = audioCtx.createGain();
+  tremoloNode.gain.value = 0.95; // 5% tremolo depth
   tremoloOsc = audioCtx.createOscillator();
-  tremoloOsc.frequency.value = 0.2 + Math.random() * 0.5; // Slow pulse (0.2–0.7 Hz)
-  tremoloOsc.connect(tremoloNode.gain);
+  tremoloOsc.type = "sine";
+  tremoloOsc.frequency.value = 0.1 + Math.random() * 0.3; // slow wave
+
+  const tremoloDepth = audioCtx.createGain();
+  tremoloDepth.gain.value = 0.05; // ~5% modulation depth
+  tremoloOsc.connect(tremoloDepth);
+  tremoloDepth.connect(tremoloNode.gain);
   tremoloOsc.start();
 
-  // Soft defaults
+  // Initial settings
   filterNode.type = "lowpass";
-  filterNode.frequency.value = 10000; // Gentle tone roll-off
+  filterNode.frequency.value = 8000;
 
-  delayNode.delayTime.value = 0.15;
-  gainNode.gain.value = 0.95;
+  delayNode.delayTime.value = 0.1;
+  gainNode.gain.value = 0.9;
 
-  distortionNode.curve = makeDistortionCurve(5); // Very mild saturation
+  distortionNode.curve = makeDistortionCurve(5);
   distortionNode.oversample = '2x';
 
-  // Chain: source → filter → delay → distortion → tremolo → gain → destination
+  // Connect the chain
   filterNode.connect(delayNode);
   delayNode.connect(distortionNode);
   distortionNode.connect(tremoloNode);
   tremoloNode.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
+  gainNode.connect(compressor);
+  compressor.connect(audioCtx.destination);
 };
 
 const makeDistortionCurve = (amount) => {
@@ -64,40 +79,48 @@ const loadSound = async () => {
 
 const scheduleRandomEffectRotation = () => {
   const applyRandomEffects = () => {
-    // Apply random but subtle effect changes
+    const now = audioCtx.currentTime;
+    const transition = 2 + Math.random(); // 2–3s
+
+    // Smooth filter sweep
     if (Math.random() > 0.3) {
-      const newFreq = Math.random() * 2000 + 3000; // 3k–5k Hz
-      filterNode.frequency.setTargetAtTime(newFreq, audioCtx.currentTime, 1);
+      const freq = 3000 + Math.random() * 3000; // 3k–6k
+      filterNode.frequency.linearRampToValueAtTime(freq, now + transition);
     }
 
+    // Subtle delay modulation
     if (Math.random() > 0.4) {
-      const newDelay = Math.random() * 0.1 + 0.05; // 50–150ms
-      delayNode.delayTime.setTargetAtTime(newDelay, audioCtx.currentTime, 1);
+      const delayTime = 0.05 + Math.random() * 0.1;
+      delayNode.delayTime.linearRampToValueAtTime(delayTime, now + transition);
     }
 
-    if (Math.random() > 0.4) {
-      const newGain = 0.85 + Math.random() * 0.1; // 0.85–0.95
-      gainNode.gain.setTargetAtTime(newGain, audioCtx.currentTime, 1);
-    }
-
-    if (Math.random() > 0.6) {
-      const amt = 3 + Math.random() * 5; // very subtle distortion
-      distortionNode.curve = makeDistortionCurve(amt);
-    }
-
+    // Gentle gain changes
     if (Math.random() > 0.5) {
-      const tremFreq = 0.1 + Math.random() * 0.4; // 0.1–0.5 Hz
-      tremoloOsc.frequency.setValueAtTime(tremFreq, audioCtx.currentTime);
+      const gain = 0.85 + Math.random() * 0.1;
+      gainNode.gain.linearRampToValueAtTime(gain, now + transition);
     }
 
-    const nextDelay = 20000 + Math.random() * 15000; // 20–35s between changes
-    setTimeout(applyRandomEffects, nextDelay);
+    // Soft distortion changes
+    if (Math.random() > 0.6) {
+      const amount = 2 + Math.random() * 6;
+      distortionNode.curve = makeDistortionCurve(amount);
+    }
+
+    // Tremolo frequency drift
+    if (Math.random() > 0.4) {
+      const tremFreq = 0.1 + Math.random() * 0.3;
+      tremoloOsc.frequency.linearRampToValueAtTime(tremFreq, now + transition);
+    }
+
+    // Schedule next modulation cycle
+    const next = 20000 + Math.random() * 10000; // 20–30s
+    setTimeout(applyRandomEffects, next);
   };
 
   applyRandomEffects();
 };
 
-// Start on user interaction
+// Wait for user to start
 document.getElementById("startBtn").addEventListener("click", async () => {
   if (audioCtx.state === "suspended") {
     await audioCtx.resume();
