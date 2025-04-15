@@ -173,3 +173,13 @@ tremoloControl.addEventListener("input", () => {
     tremoloDepth.connect(tremoloNode.gain);
   }
 });
+
+                          randomizeEffectsBtn.addEventListener("click", () => {
+  distortionControl.value = (2 + Math.random() * 18).toFixed(0);
+  reverbControl.value = (Math.random() * 0.5).toFixed(2);
+  tremoloControl.value = (Math.random() * 0.5).toFixed(2);
+
+  distortionControl.dispatchEvent(new Event("input"));
+  reverbControl.dispatchEvent(new Event("input"));
+  tremoloControl.dispatchEvent(new Event("input"));
+});
