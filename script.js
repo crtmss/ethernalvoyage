@@ -168,3 +168,4 @@ function scheduleRandomEffectRotation() {
     }
   }, 8000);
 }
+
