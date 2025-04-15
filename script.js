@@ -1,5 +1,6 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-let source, track, isPlaying = false;
+let source, buffer = null, isPlaying = false;
+let currentTrack = "ambient.mp3";
 
 const startBtn = document.getElementById("startBtn");
 const volumeSlider = document.getElementById("volumeSlider");
@@ -9,20 +10,16 @@ const glitchControl = document.getElementById("glitchControl");
 const trackSelector = document.getElementById("trackSelector");
 const randomizeEffectsBtn = document.getElementById("randomizeEffectsBtn");
 
-let gainNode = audioCtx.createGain();
-let distortionNode = audioCtx.createWaveShaper();
-let tremoloOsc = audioCtx.createOscillator();
-let tremoloGain = audioCtx.createGain();
-let delayNode = audioCtx.createDelay();
-let dryGain = audioCtx.createGain();
-let wetGain = audioCtx.createGain();
-
-let buffer = null;
-let currentTrack = trackSelector.value;
+const gainNode = audioCtx.createGain();
+const distortionNode = audioCtx.createWaveShaper();
+const tremoloOsc = audioCtx.createOscillator();
+const tremoloGain = audioCtx.createGain();
+const delayNode = audioCtx.createDelay();
+const dryGain = audioCtx.createGain();
+const wetGain = audioCtx.createGain();
 
 tremoloOsc.type = "sine";
-tremoloOsc.frequency.value = 4; // slight pulse
-tremoloGain.gain.value = 0.05;
+tremoloOsc.frequency.value = 4;
 tremoloOsc.connect(tremoloGain.gain);
 tremoloOsc.start();
 
@@ -54,9 +51,9 @@ startBtn.addEventListener("click", async () => {
 });
 
 randomizeEffectsBtn.addEventListener("click", () => {
-  distortionControl.value = Math.random() * 20;
-  tremoloControl.value = Math.random() * 0.5;
-  glitchControl.value = Math.random();
+  distortionControl.value = Math.random().toFixed(2);
+  tremoloControl.value = Math.random().toFixed(2);
+  glitchControl.value = Math.random().toFixed(2);
 });
 
 function createDistortionCurve(amount) {
@@ -72,26 +69,13 @@ function createDistortionCurve(amount) {
 }
 
 async function loadAndPlay() {
-  if (!buffer || currentTrack !== trackSelector.value) {
-    const response = await fetch(currentTrack);
-    const arrayBuffer = await response.arrayBuffer();
-    buffer = await audioCtx.decodeAudioData(arrayBuffer);
-  }
+  const response = await fetch(currentTrack);
+  const arrayBuffer = await response.arrayBuffer();
+  buffer = await audioCtx.decodeAudioData(arrayBuffer);
 
   source = audioCtx.createBufferSource();
   source.buffer = buffer;
   source.loop = true;
-
-  // Set up audio graph
-  distortionNode.curve = createDistortionCurve(distortionControl.value);
-  distortionNode.oversample = "4x";
-
-  tremoloOsc.connect(tremoloGain.gain);
-  tremoloGain.gain.value = tremoloControl.value;
-
-  dryGain.gain.value = 1;
-  wetGain.gain.value = 0.2; // subtle reverb by default
-  delayNode.delayTime.value = 0.2;
 
   source.connect(distortionNode);
   distortionNode.connect(tremoloGain);
@@ -99,73 +83,75 @@ async function loadAndPlay() {
   gainNode.connect(dryGain);
   gainNode.connect(delayNode);
   delayNode.connect(wetGain);
-
   dryGain.connect(audioCtx.destination);
   wetGain.connect(audioCtx.destination);
 
+  applyEffectSettings();
   source.start();
   isPlaying = true;
-
   scheduleRandomEffectRotation();
 }
 
 function stopAudio() {
-  if (source) {
-    source.stop(0);
-    source.disconnect();
-  }
+  if (source) source.stop();
   isPlaying = false;
+}
+
+function applyEffectSettings() {
+  const distortionAmt = parseFloat(distortionControl.value) * 100;
+  const tremoloAmt = parseFloat(tremoloControl.value) * 0.5;
+
+  distortionNode.curve = createDistortionCurve(distortionAmt);
+  tremoloGain.gain.linearRampToValueAtTime(tremoloAmt, audioCtx.currentTime + 0.5);
+  delayNode.delayTime.value = 0.2;
+  dryGain.gain.value = 1;
+  wetGain.gain.value = 0.2;
 }
 
 function scheduleRandomEffectRotation() {
   setInterval(() => {
     if (!isPlaying) return;
+    applyEffectSettings();
 
-    // Randomize distortion curve
-    const distortionAmount = parseFloat(distortionControl.value);
-    distortionNode.curve = createDistortionCurve(distortionAmount);
-
-    // Randomize tremolo
-    tremoloGain.gain.linearRampToValueAtTime(
-      tremoloControl.value,
-      audioCtx.currentTime + 1
-    );
-
-    // Smooth reverb transition
     const newDelay = 0.1 + Math.random() * 0.3;
-    delayNode.delayTime.linearRampToValueAtTime(
-      newDelay,
-      audioCtx.currentTime + 4
-    );
+    delayNode.delayTime.linearRampToValueAtTime(newDelay, audioCtx.currentTime + 4);
 
-    // Glitch simulation
-    if (Math.random() > 0.6) {
-      const glitchIntensity = parseFloat(glitchControl.value);
-      if (glitchIntensity > 0.05) {
-        const pitchOscAmount = 0.5 + Math.random() * 1.5;
-        const stutterDuration = 0.05 + Math.random() * 0.1;
+    const glitchIntensity = parseFloat(glitchControl.value);
+    if (Math.random() > 0.6 && glitchIntensity > 0.05) {
+      glitchActive = true;
+      const stutterDur = 0.1 + Math.random() * 0.1;
+      const rateShift = 1.0 + (Math.random() * glitchIntensity);
 
-        source.playbackRate.setValueAtTime(1.0, audioCtx.currentTime);
-        source.playbackRate.linearRampToValueAtTime(
-          1.0 + pitchOscAmount * glitchIntensity,
-          audioCtx.currentTime + stutterDuration / 2
-        );
-        source.playbackRate.linearRampToValueAtTime(
-          1.0,
-          audioCtx.currentTime + stutterDuration
-        );
+      source.playbackRate.setValueAtTime(1.0, audioCtx.currentTime);
+      source.playbackRate.linearRampToValueAtTime(rateShift, audioCtx.currentTime + stutterDur / 2);
+      source.playbackRate.linearRampToValueAtTime(1.0, audioCtx.currentTime + stutterDur);
 
-        gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(
-          gainNode.gain.value * (0.6 + Math.random() * 0.3),
-          audioCtx.currentTime + stutterDuration / 2
-        );
-        gainNode.gain.linearRampToValueAtTime(
-          gainNode.gain.value,
-          audioCtx.currentTime + stutterDuration
-        );
-      }
+      gainNode.gain.setValueAtTime(gainNode.gain.value, audioCtx.currentTime);
+      gainNode.gain.linearRampToValueAtTime(gainNode.gain.value * 0.7, audioCtx.currentTime + stutterDur / 2);
+      gainNode.gain.linearRampToValueAtTime(gainNode.gain.value, audioCtx.currentTime + stutterDur);
+
+      setTimeout(() => { glitchActive = false; }, 300);
     }
   }, 8000);
 }
+
+let glitchActive = false;
+function animateSliders() {
+  const now = audioCtx.currentTime;
+  const tremFreq = tremoloOsc.frequency.value;
+  const tremPercent = parseFloat(tremoloControl.value);
+  const visualTrem = (Math.sin(now * tremFreq * 2 * Math.PI) + 1) / 2;
+  tremoloControl.style.setProperty('--progress', tremPercent * visualTrem);
+
+  if (glitchActive) {
+    glitchControl.style.setProperty('--progress', glitchControl.value * (0.6 + Math.random() * 0.4));
+  } else {
+    glitchControl.style.setProperty('--progress', glitchControl.value);
+  }
+
+  distortionControl.style.setProperty('--progress', distortionControl.value);
+  requestAnimationFrame(animateSliders);
+}
+animateSliders();
+
 
