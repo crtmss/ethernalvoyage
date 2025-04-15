@@ -7,20 +7,21 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="player">
-    <h1>🌌 Ambient Player</h1>
+<div class="player" id="playerContainer">
+  <h1>🌌 Ambient Player</h1>
 
-    <label for="trackSelector">Choose a track:</label>
-    <select id="trackSelector">
-      <option value="ambient.mp3">Ambient 1</option>
-      <option value="ambient2.mp3">Ambient 2</option>
-    </select>
+  <label for="trackSelector">Choose a track:</label>
+  <select id="trackSelector">
+    <option value="ambient.mp3">Ambient 1</option>
+    <option value="ambient2.mp3">Ambient 2</option>
+  </select>
 
-    <button id="startBtn">Start</button>
+  <button id="startBtn" class="inactive">Start</button>
 
-    <label for="volumeSlider">Volume</label>
-    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.9" />
-  </div>
+  <label for="volumeSlider">Volume</label>
+  <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.9" />
+</div>
+
 
   <script src="script.js"></script>
 </body>
