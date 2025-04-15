@@ -39,3 +39,28 @@ button.active {
   background-color: #3cb371; /* green */
   color: white;
 }
+
+.effects-panel {
+  margin-top: 1em;
+}
+
+.effect-sliders {
+  display: flex;
+  justify-content: space-around;
+  align-items: flex-end;
+  margin: 1em 0;
+}
+
+.effect-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 60px;
+}
+
+.vertical-slider {
+  writing-mode: bt-lr; /* bottom to top */
+  -webkit-appearance: slider-vertical;
+  height: 100px;
+}
+
