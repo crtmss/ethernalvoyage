@@ -10,19 +10,16 @@ const loadSound = async () => {
   source.buffer = audioBuffer;
   source.loop = true;
 
-  // Create audio nodes
   gainNode = audioCtx.createGain();
   filterNode = audioCtx.createBiquadFilter();
   delayNode = audioCtx.createDelay();
 
-  // Initial settings
   filterNode.type = "lowpass";
-  filterNode.frequency.setValueAtTime(12000, audioCtx.currentTime);
+  filterNode.frequency.value = 12000;
 
-  delayNode.delayTime.setValueAtTime(0.2, audioCtx.currentTime);
-  gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+  delayNode.delayTime.value = 0.2;
+  gainNode.gain.value = 1;
 
-  // Connect graph: source → filter → delay → gain → speakers
   source.connect(filterNode);
   filterNode.connect(delayNode);
   delayNode.connect(gainNode);
@@ -31,6 +28,14 @@ const loadSound = async () => {
   source.start();
   scheduleRandomEffects();
 };
+
+document.getElementById("startBtn").addEventListener("click", async () => {
+  if (audioCtx.state === "suspended") {
+    await audioCtx.resume();
+  }
+  loadSound();
+  document.getElementById("startBtn").style.display = 'none'; // hide after click
+});
 
 const scheduleRandomEffects = () => {
   setInterval(() => {
