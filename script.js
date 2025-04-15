@@ -1,46 +1,60 @@
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 let source, gainNode, filterNode, delayNode, distortionNode, tremoloNode, tremoloOsc, compressor;
+let selectedTrack = "ambient.mp3";
+
+const trackSelector = document.getElementById("trackSelector");
+const volumeSlider = document.getElementById("volumeSlider");
+
+trackSelector.addEventListener("change", () => {
+  selectedTrack = trackSelector.value;
+  stopAndReloadTrack();
+});
+
+volumeSlider.addEventListener("input", () => {
+  if (gainNode) {
+    gainNode.gain.value = parseFloat(volumeSlider.value);
+  }
+});
 
 const createEffectChain = () => {
-  // Core FX nodes
   gainNode = audioCtx.createGain();
   filterNode = audioCtx.createBiquadFilter();
   delayNode = audioCtx.createDelay();
   distortionNode = audioCtx.createWaveShaper();
   compressor = audioCtx.createDynamicsCompressor();
 
-  // Soft post-mastering
+  // Compressor settings (post-mastering)
   compressor.threshold.setValueAtTime(-30, audioCtx.currentTime);
   compressor.knee.setValueAtTime(20, audioCtx.currentTime);
   compressor.ratio.setValueAtTime(3, audioCtx.currentTime);
   compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
   compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
 
-  // Tremolo setup
+  // Tremolo
   tremoloNode = audioCtx.createGain();
-  tremoloNode.gain.value = 0.95; // 5% tremolo depth
+  tremoloNode.gain.value = parseFloat(volumeSlider.value);
+
   tremoloOsc = audioCtx.createOscillator();
   tremoloOsc.type = "sine";
-  tremoloOsc.frequency.value = 0.1 + Math.random() * 0.3; // slow wave
+  tremoloOsc.frequency.value = 0.1 + Math.random() * 0.3;
 
   const tremoloDepth = audioCtx.createGain();
-  tremoloDepth.gain.value = 0.05; // ~5% modulation depth
+  tremoloDepth.gain.value = 0.05;
   tremoloOsc.connect(tremoloDepth);
   tremoloDepth.connect(tremoloNode.gain);
   tremoloOsc.start();
 
-  // Initial settings
+  // Default FX
   filterNode.type = "lowpass";
   filterNode.frequency.value = 8000;
 
   delayNode.delayTime.value = 0.1;
-  gainNode.gain.value = 0.9;
-
+  gainNode.gain.value = parseFloat(volumeSlider.value);
   distortionNode.curve = makeDistortionCurve(5);
   distortionNode.oversample = '2x';
 
-  // Connect the chain
+  // Chain
   filterNode.connect(delayNode);
   delayNode.connect(distortionNode);
   distortionNode.connect(tremoloNode);
@@ -61,8 +75,8 @@ const makeDistortionCurve = (amount) => {
   return curve;
 };
 
-const loadSound = async () => {
-  const response = await fetch('ambient.mp3');
+const loadSound = async (track) => {
+  const response = await fetch(track);
   const arrayBuffer = await response.arrayBuffer();
   const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
@@ -77,54 +91,57 @@ const loadSound = async () => {
   scheduleRandomEffectRotation();
 };
 
+const stopAndReloadTrack = async () => {
+  if (source) {
+    try {
+      source.stop();
+    } catch {}
+  }
+  loadSound(selectedTrack);
+};
+
 const scheduleRandomEffectRotation = () => {
   const applyRandomEffects = () => {
     const now = audioCtx.currentTime;
     const transition = 2 + Math.random(); // 2–3s
 
-    // Smooth filter sweep
     if (Math.random() > 0.3) {
-      const freq = 3000 + Math.random() * 3000; // 3k–6k
+      const freq = 3000 + Math.random() * 3000;
       filterNode.frequency.linearRampToValueAtTime(freq, now + transition);
     }
 
-    // Subtle delay modulation
     if (Math.random() > 0.4) {
       const delayTime = 0.05 + Math.random() * 0.1;
       delayNode.delayTime.linearRampToValueAtTime(delayTime, now + transition);
     }
 
-    // Gentle gain changes
     if (Math.random() > 0.5) {
       const gain = 0.85 + Math.random() * 0.1;
       gainNode.gain.linearRampToValueAtTime(gain, now + transition);
     }
 
-    // Soft distortion changes
     if (Math.random() > 0.6) {
       const amount = 2 + Math.random() * 6;
       distortionNode.curve = makeDistortionCurve(amount);
     }
 
-    // Tremolo frequency drift
     if (Math.random() > 0.4) {
       const tremFreq = 0.1 + Math.random() * 0.3;
       tremoloOsc.frequency.linearRampToValueAtTime(tremFreq, now + transition);
     }
 
-    // Schedule next modulation cycle
-    const next = 20000 + Math.random() * 10000; // 20–30s
+    const next = 20000 + Math.random() * 10000;
     setTimeout(applyRandomEffects, next);
   };
 
   applyRandomEffects();
 };
 
-// Wait for user to start
+// Init
 document.getElementById("startBtn").addEventListener("click", async () => {
   if (audioCtx.state === "suspended") {
     await audioCtx.resume();
   }
-  loadSound();
+  loadSound(selectedTrack);
   document.getElementById("startBtn").style.display = 'none';
 });
