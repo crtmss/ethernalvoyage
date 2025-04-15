@@ -6,11 +6,11 @@ let isPlaying = false;
 
 const trackSelector = document.getElementById("trackSelector");
 const volumeSlider = document.getElementById("volumeSlider");
+const startBtn = document.getElementById("startBtn");
 const distortionControl = document.getElementById("distortionControl");
 const reverbControl = document.getElementById("reverbControl");
 const tremoloControl = document.getElementById("tremoloControl");
 const randomizeEffectsBtn = document.getElementById("randomizeEffectsBtn");
-const startBtn = document.getElementById("startBtn");
 
 trackSelector.addEventListener("change", () => {
   selectedTrack = trackSelector.value;
@@ -21,6 +21,40 @@ volumeSlider.addEventListener("input", () => {
   if (gainNode) {
     gainNode.gain.value = parseFloat(volumeSlider.value);
   }
+});
+
+distortionControl.addEventListener("input", () => {
+  if (distortionNode) {
+    distortionNode.curve = makeDistortionCurve(parseFloat(distortionControl.value));
+  }
+});
+
+reverbControl.addEventListener("input", () => {
+  if (delayNode) {
+    delayNode.delayTime.value = parseFloat(reverbControl.value);
+  }
+});
+
+tremoloControl.addEventListener("input", () => {
+  if (tremoloNode && tremoloOsc) {
+    const depth = parseFloat(tremoloControl.value);
+    tremoloNode.gain.value = 1;
+    tremoloOsc.disconnect();
+    const tremoloDepth = audioCtx.createGain();
+    tremoloDepth.gain.value = depth;
+    tremoloOsc.connect(tremoloDepth);
+    tremoloDepth.connect(tremoloNode.gain);
+  }
+});
+
+randomizeEffectsBtn.addEventListener("click", () => {
+  distortionControl.value = (2 + Math.random() * 18).toFixed(0);
+  reverbControl.value = (Math.random() * 0.5).toFixed(2);
+  tremoloControl.value = (Math.random() * 0.5).toFixed(2);
+
+  distortionControl.dispatchEvent(new Event("input"));
+  reverbControl.dispatchEvent(new Event("input"));
+  tremoloControl.dispatchEvent(new Event("input"));
 });
 
 const createEffectChain = () => {
@@ -132,7 +166,6 @@ const scheduleRandomEffectRotation = () => {
   applyRandomEffects();
 };
 
-// Toggle button functionality
 startBtn.addEventListener("click", async () => {
   if (!isPlaying) {
     if (audioCtx.state === "suspended") await audioCtx.resume();
@@ -148,38 +181,4 @@ startBtn.addEventListener("click", async () => {
     startBtn.classList.remove("active");
     startBtn.classList.add("inactive");
   }
-
-  
-distortionControl.addEventListener("input", () => {
-  if (distortionNode) {
-    distortionNode.curve = makeDistortionCurve(parseFloat(distortionControl.value));
-  }
-});
-
-reverbControl.addEventListener("input", () => {
-  if (delayNode) {
-    delayNode.delayTime.value = parseFloat(reverbControl.value);
-  }
-});
-
-tremoloControl.addEventListener("input", () => {
-  if (tremoloNode && tremoloOsc) {
-    const depth = parseFloat(tremoloControl.value);
-    tremoloNode.gain.value = 1;
-    tremoloOsc.disconnect();
-    const tremoloDepth = audioCtx.createGain();
-    tremoloDepth.gain.value = depth;
-    tremoloOsc.connect(tremoloDepth);
-    tremoloDepth.connect(tremoloNode.gain);
-  }
-});
-
-                          randomizeEffectsBtn.addEventListener("click", () => {
-  distortionControl.value = (2 + Math.random() * 18).toFixed(0);
-  reverbControl.value = (Math.random() * 0.5).toFixed(2);
-  tremoloControl.value = (Math.random() * 0.5).toFixed(2);
-
-  distortionControl.dispatchEvent(new Event("input"));
-  reverbControl.dispatchEvent(new Event("input"));
-  tremoloControl.dispatchEvent(new Event("input"));
 });
