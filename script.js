@@ -37,23 +37,21 @@ const createEffectChain = () => {
   compressor.release.setValueAtTime(0.25, audioCtx.currentTime);
 
   tremoloNode = audioCtx.createGain();
-  tremoloNode.gain.value = parseFloat(volumeSlider.value);
-
   tremoloOsc = audioCtx.createOscillator();
   tremoloOsc.type = "sine";
-  tremoloOsc.frequency.value = 0.1 + Math.random() * 0.3;
+  tremoloOsc.frequency.value = 0.2;
 
   const tremoloDepth = audioCtx.createGain();
-  tremoloDepth.gain.value = 0.05;
+  tremoloDepth.gain.value = parseFloat(tremoloControl.value);
   tremoloOsc.connect(tremoloDepth);
   tremoloDepth.connect(tremoloNode.gain);
   tremoloOsc.start();
 
   filterNode.type = "lowpass";
   filterNode.frequency.value = 8000;
-  delayNode.delayTime.value = 0.1;
+  delayNode.delayTime.value = parseFloat(reverbControl.value);
   gainNode.gain.value = parseFloat(volumeSlider.value);
-  distortionNode.curve = makeDistortionCurve(5);
+  distortionNode.curve = makeDistortionCurve(parseFloat(distortionControl.value));
   distortionNode.oversample = '2x';
 
   filterNode.connect(delayNode);
@@ -149,5 +147,29 @@ startBtn.addEventListener("click", async () => {
     startBtn.textContent = "Start";
     startBtn.classList.remove("active");
     startBtn.classList.add("inactive");
+  }
+
+  
+distortionControl.addEventListener("input", () => {
+  if (distortionNode) {
+    distortionNode.curve = makeDistortionCurve(parseFloat(distortionControl.value));
+  }
+});
+
+reverbControl.addEventListener("input", () => {
+  if (delayNode) {
+    delayNode.delayTime.value = parseFloat(reverbControl.value);
+  }
+});
+
+tremoloControl.addEventListener("input", () => {
+  if (tremoloNode && tremoloOsc) {
+    const depth = parseFloat(tremoloControl.value);
+    tremoloNode.gain.value = 1;
+    tremoloOsc.disconnect();
+    const tremoloDepth = audioCtx.createGain();
+    tremoloDepth.gain.value = depth;
+    tremoloOsc.connect(tremoloDepth);
+    tremoloDepth.connect(tremoloNode.gain);
   }
 });
