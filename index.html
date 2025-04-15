@@ -2,14 +2,26 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Ambient Space</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Ambient Player</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="container">
-    <h1>🪐 Floating Through the Void</h1>
-    <button id="startBtn">Start Sound</button>
+  <div class="player">
+    <h1>🌌 Ambient Player</h1>
+
+    <label for="trackSelector">Choose a track:</label>
+    <select id="trackSelector">
+      <option value="ambient.mp3">Ambient 1</option>
+      <option value="ambient2.mp3">Ambient 2</option>
+    </select>
+
+    <button id="startBtn">Start</button>
+
+    <label for="volumeSlider">Volume</label>
+    <input type="range" id="volumeSlider" min="0" max="1" step="0.01" value="0.9" />
   </div>
+
   <script src="script.js"></script>
 </body>
 </html>
