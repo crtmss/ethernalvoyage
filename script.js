@@ -6,6 +6,10 @@ let isPlaying = false;
 
 const trackSelector = document.getElementById("trackSelector");
 const volumeSlider = document.getElementById("volumeSlider");
+const distortionControl = document.getElementById("distortionControl");
+const reverbControl = document.getElementById("reverbControl");
+const tremoloControl = document.getElementById("tremoloControl");
+const randomizeEffectsBtn = document.getElementById("randomizeEffectsBtn");
 const startBtn = document.getElementById("startBtn");
 
 trackSelector.addEventListener("change", () => {
