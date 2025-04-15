@@ -14,12 +14,28 @@ body {
   border-radius: 12px;
   box-shadow: 0 0 10px #444;
   text-align: center;
+  width: 280px;
+  min-height: 300px;
+  transition: background 0.3s ease;
 }
 
-select, input[type="range"], button {
+select,
+input[type="range"],
+button {
   margin-top: 1em;
   width: 100%;
   padding: 0.5em;
   border-radius: 6px;
   border: none;
+  font-size: 1em;
+}
+
+button.inactive {
+  background-color: #444;
+  color: white;
+}
+
+button.active {
+  background-color: #3cb371; /* green */
+  color: white;
 }
